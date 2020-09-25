@@ -2420,3 +2420,5 @@ void fireworks(CRGB zone[], int zoneLEDS, Ball balls[], int fireworkCount, uint8
         }
       }
     }
+  }
+}
