@@ -105,6 +105,58 @@ light:
     white_value_state_topic: "[MQTT_CLIENT_ID]/lightningChanceState"
     white_value_scale: 500
     retain: true
+  - platform: mqtt
+    name: "Holiday Lights Zone 1"
+    command_topic: "[MQTT_CLIENT_ID]/power/Zone1"
+    state_topic: "[MQTT_CLIENT_ID]/powerState/Zone1"
+    brightness_command_topic: "[MQTT_CLIENT_ID]/brightness/Zone1"
+    brightness_state_topic: "[MQTT_CLIENT_ID]/brightnessState/Zone1"
+    brightness_scale: 255
+    white_value_command_topic: "[MQTT_CLIENT_ID]/modifier/Zone1"
+    white_value_state_topic: "[MQTT_CLIENT_ID]/modifierState/Zone1"
+    white_value_scale: 500
+    effect_command_topic: "[MQTT_CLIENT_ID]/effect/Zone1"
+    effect_state_topic: "[MQTT_CLIENT_ID]/effectState/Zone1"
+    effect_list:
+      - Color_Chase
+      - Color_Glitter
+      - Single_Race
+      - Double_Crash
+      - Rainbow
+      - Blocked_Colors
+      - BPM
+      - Twinkle
+      - Fire
+      - Fill_Solid
+      - Spooky_Eyes
+      - LED_Locator
+    retain: true
+  - platform: mqtt
+    name: "Holiday Lights Zone 2"
+    command_topic: "[MQTT_CLIENT_ID]/power/Zone2"
+    state_topic: "[MQTT_CLIENT_ID]/powerState/Zone2"
+    brightness_command_topic: "[MQTT_CLIENT_ID]/brightness/Zone2"
+    brightness_state_topic: "[MQTT_CLIENT_ID]/brightnessState/Zone2"
+    brightness_scale: 255
+    white_value_command_topic: "[MQTT_CLIENT_ID]/modifier/Zone2"
+    white_value_state_topic: "[MQTT_CLIENT_ID]/modifierState/Zone2"
+    white_value_scale: 500
+    effect_command_topic: "[MQTT_CLIENT_ID]/effect/Zone2"
+    effect_state_topic: "[MQTT_CLIENT_ID]/effectState/Zone2"
+    effect_list:
+      - Color_Chase
+      - Color_Glitter
+      - Single_Race
+      - Double_Crash
+      - Rainbow
+      - Blocked_Colors
+      - BPM
+      - Twinkle
+      - Fire
+      - Fill_Solid
+      - Spooky_Eyes
+      - LED_Locator
+    retain: true
   ```
 ## OpenHAB Support
 
