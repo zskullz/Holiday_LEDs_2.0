@@ -564,7 +564,6 @@ byte blue3 = 255;
 byte redG = 255;
 byte greenG = 255;
 byte blueG = 255;
-byte brightness = 255;
 char charPayload[50];
 int maxLEDs = 500;
 int locatorLED = 0;
@@ -572,8 +571,14 @@ char MQTT_locatorLED[50];
 int locatorDelay = 1000;
 String zoneEffects[6] = {"None","None","None","None","None","None"};
 int zoneModifer[6] = { 100, 100, 100, 100, 100, 100 };
+byte zoneBrightness[6] = {255,255,255,255,255,255};
 uint8_t zoneStartPosition[6] = { 0, 0, 0, 0, 0, 0 };
 bool showZoneLights[6] = { false, false, false, false, false, false };
+const int colorsCount = 5;
+String colorStates[colorsCount+1] = { "broken", "ON", "ON", "ON", "OFF", "OFF" };
+byte rgbArray[colorsCount][3] = {{255,0,0},{255,0,0},{255,0,0},{255,0,0},{255,0,0}};
+uint8_t colorsEnabled = 3;
+CRGB availableColors[5] = {};
 
 
 /*****************  SYSTEM FUNCTIONS  *************************************/
@@ -625,6 +630,7 @@ void reconnect()
         {
           client.publish(USER_MQTT_CLIENT_NAME"/checkIn","Reconnected"); 
         }
+        publishStates();
         // ... and resubscribe
         client.subscribe(USER_MQTT_CLIENT_NAME"/configure");
         client.subscribe(USER_MQTT_CLIENT_NAME"/modifier");
@@ -632,18 +638,20 @@ void reconnect()
         client.subscribe(USER_MQTT_CLIENT_NAME"/effect");
         client.subscribe(USER_MQTT_CLIENT_NAME"/effect/+");
         client.subscribe(USER_MQTT_CLIENT_NAME"/state");
+        client.subscribe(USER_MQTT_CLIENT_NAME"/ColorSelector/+/Toggle");
         client.subscribe(USER_MQTT_CLIENT_NAME"/color1");
         client.subscribe(USER_MQTT_CLIENT_NAME"/color2");
         client.subscribe(USER_MQTT_CLIENT_NAME"/color3");
+        client.subscribe(USER_MQTT_CLIENT_NAME"/color4");
+        client.subscribe(USER_MQTT_CLIENT_NAME"/color5");
         client.subscribe(USER_MQTT_CLIENT_NAME"/power");
         client.subscribe(USER_MQTT_CLIENT_NAME"/power/+");
         client.subscribe(USER_MQTT_CLIENT_NAME"/brightness");
+        client.subscribe(USER_MQTT_CLIENT_NAME"/brightness/+");
         client.subscribe(USER_MQTT_CLIENT_NAME"/addEffects");
         client.subscribe(USER_MQTT_CLIENT_NAME"/lightningChance");
         client.subscribe(USER_MQTT_CLIENT_NAME"/glitterChance");
         client.subscribe(USER_MQTT_CLIENT_NAME"/glitterColor");
-
-        publishStates();
       } 
       else 
       {
@@ -689,40 +697,70 @@ void calculateMax()
   #endif 
 }
 
+String boolToOnOff(bool setting)
+{
+  String state = "OFF";
+  if(setting == true)
+  {
+    state = ("ON");
+  }
+  
+  return state;
+}
+
 void publishStates()
 {
   char buff[50];
   client.publish(USER_MQTT_CLIENT_NAME"/modifierState", itoa(zoneModifer[0], buff, 10));
-  client.publish(USER_MQTT_CLIENT_NAME"/modifierState/Zone1", itoa(zoneModifer[0], buff, 10));
-  client.publish(USER_MQTT_CLIENT_NAME"/modifierState/Zone2", itoa(zoneModifer[1], buff, 10));
-  client.publish(USER_MQTT_CLIENT_NAME"/modifierState/Zone3", itoa(zoneModifer[2], buff, 10));
-  client.publish(USER_MQTT_CLIENT_NAME"/modifierState/Zone4", itoa(zoneModifer[3], buff, 10));
-  client.publish(USER_MQTT_CLIENT_NAME"/modifierState/Zone5", itoa(zoneModifer[4], buff, 10));
-  client.publish(USER_MQTT_CLIENT_NAME"/modifierState/Zone6", itoa(zoneModifer[5], buff, 10));
-  client.publish(USER_MQTT_CLIENT_NAME"/audio/state", String(audioEffects).c_str());
-  client.publish(USER_MQTT_CLIENT_NAME"/glitter/state", String(showGlitter).c_str());
-  client.publish(USER_MQTT_CLIENT_NAME"/lightning/state", String(showLightning).c_str());
+  client.publish(USER_MQTT_CLIENT_NAME"/audio/state", boolToOnOff(audioEffects).c_str());
+  client.publish(USER_MQTT_CLIENT_NAME"/glitter/state", boolToOnOff(showGlitter).c_str());
+  client.publish(USER_MQTT_CLIENT_NAME"/lightning/state", boolToOnOff(showLightning).c_str());
   client.publish(USER_MQTT_CLIENT_NAME"/effectState", zoneEffects[0].c_str());
-  client.publish(USER_MQTT_CLIENT_NAME"/effectState/Zone1", zoneEffects[0].c_str());
-  client.publish(USER_MQTT_CLIENT_NAME"/effectState/Zone2", zoneEffects[1].c_str());
-  client.publish(USER_MQTT_CLIENT_NAME"/effectState/Zone3", zoneEffects[2].c_str());
-  client.publish(USER_MQTT_CLIENT_NAME"/effectState/Zone4", zoneEffects[3].c_str());
-  client.publish(USER_MQTT_CLIENT_NAME"/effectState/Zone5", zoneEffects[4].c_str());
-  client.publish(USER_MQTT_CLIENT_NAME"/effectState/Zone6", zoneEffects[5].c_str());
   client.publish(USER_MQTT_CLIENT_NAME "/color1State", String(String(red1) + "," + String(green1) + "," + String(blue1)).c_str()); 
   client.publish(USER_MQTT_CLIENT_NAME "/color2State", String(String(red2) + "," + String(green2) + "," + String(blue2)).c_str()); 
   client.publish(USER_MQTT_CLIENT_NAME "/color3State", String(String(red3) + "," + String(green3) + "," + String(blue3)).c_str()); 
   client.publish(USER_MQTT_CLIENT_NAME "/glitterColorState", String(String(redG) + "," + String(greenG) + "," + String(blueG)).c_str()); 
   client.publish(USER_MQTT_CLIENT_NAME "/glitterChanceState", itoa(glitterFrequency, buff, 10)); 
   client.publish(USER_MQTT_CLIENT_NAME "/lightningChanceState", itoa(65535-lightningChance, buff, 10)); 
-  client.publish(USER_MQTT_CLIENT_NAME "/brightnessState", itoa(brightness, buff, 10)); 
-  client.publish(USER_MQTT_CLIENT_NAME "/powerState",  String(showZoneLights[0]).c_str());
-  client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone1", String(showZoneLights[0]).c_str());
-  client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone2", String(showZoneLights[1]).c_str());
-  client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone3", String(showZoneLights[2]).c_str());
-  client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone4", String(showZoneLights[3]).c_str());
-  client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone5", String(showZoneLights[4]).c_str());
-  client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone6", String(showZoneLights[5]).c_str());
+  client.publish(USER_MQTT_CLIENT_NAME "/brightnessState", itoa(zoneBrightness[0], buff, 10)); 
+  client.publish(USER_MQTT_CLIENT_NAME "/powerState",  boolToOnOff(showZoneLights[0]).c_str());
+  
+  #if ZONEONE == 1
+  client.publish(USER_MQTT_CLIENT_NAME"/modifierState/Zone1", itoa(zoneModifer[0], buff, 10));
+  client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone1", boolToOnOff(showZoneLights[0]).c_str());
+  client.publish(USER_MQTT_CLIENT_NAME"/effectState/Zone1", zoneEffects[0].c_str());
+  client.publish(USER_MQTT_CLIENT_NAME "/brightnessStateZone1", itoa(zoneBrightness[0], buff, 10));
+  #endif
+  #if ZONETWO == 1
+  client.publish(USER_MQTT_CLIENT_NAME"/modifierState/Zone2", itoa(zoneModifer[1], buff, 10));
+  client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone2", boolToOnOff(showZoneLights[1]).c_str());
+  client.publish(USER_MQTT_CLIENT_NAME"/effectState/Zone2", zoneEffects[1].c_str());
+  client.publish(USER_MQTT_CLIENT_NAME "/brightnessStateZone2", itoa(zoneBrightness[1], buff, 10));  
+  #endif
+  #if ZONETHREE == 1
+  client.publish(USER_MQTT_CLIENT_NAME"/modifierState/Zone3", itoa(zoneModifer[2], buff, 10));
+  client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone3", boolToOnOff(showZoneLights[2]).c_str());
+  client.publish(USER_MQTT_CLIENT_NAME"/effectState/Zone3", zoneEffects[2].c_str());
+  client.publish(USER_MQTT_CLIENT_NAME "/brightnessStateZone3", itoa(zoneBrightness[2], buff, 10));
+  #endif
+  #if ZONEFOUR == 1
+  client.publish(USER_MQTT_CLIENT_NAME"/modifierState/Zone4", itoa(zoneModifer[3], buff, 10));
+  client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone4", boolToOnOff(showZoneLights[3]).c_str());
+  client.publish(USER_MQTT_CLIENT_NAME"/effectState/Zone4", zoneEffects[3].c_str());
+  client.publish(USER_MQTT_CLIENT_NAME "/brightnessStateZone4", itoa(zoneBrightness[3], buff, 10));
+  #endif
+  #if ZONEFIVE == 1
+  client.publish(USER_MQTT_CLIENT_NAME"/modifierState/Zone5", itoa(zoneModifer[4], buff, 10));
+  client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone5", boolToOnOff(showZoneLights[4]).c_str());
+  client.publish(USER_MQTT_CLIENT_NAME"/effectState/Zone5", zoneEffects[4].c_str());
+  client.publish(USER_MQTT_CLIENT_NAME "/brightnessStateZone5", itoa(zoneBrightness[4], buff, 10));
+  #endif
+  #if ZONESIX == 1
+  client.publish(USER_MQTT_CLIENT_NAME"/modifierState/Zone6", itoa(zoneModifer[5], buff, 10));
+  client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone6", boolToOnOff(showZoneLights[5]).c_str());
+  client.publish(USER_MQTT_CLIENT_NAME"/effectState/Zone6", zoneEffects[5].c_str());
+  client.publish(USER_MQTT_CLIENT_NAME "/brightnessStateZone6", itoa(zoneBrightness[5], buff, 10));
+  #endif
 }
 
 /************************** MQTT CALLBACK ***********************/
@@ -887,7 +925,37 @@ void callback(char* topic, byte* payload, unsigned int length)
     fill_solid(sixthZone, SIXTHZONE_LEDS, CRGB::Black);
     client.publish(USER_MQTT_CLIENT_NAME"/effectState/Zone6", charPayload);
   }
-  #endif  
+  #endif
+
+  if (newTopic == USER_MQTT_CLIENT_NAME "/ColorSelector/1/Toggle")
+  {
+      colorStates[1] = newPayload;
+      client.publish(USER_MQTT_CLIENT_NAME "/ColorSelector/1/ToggleState", colorStates[1].c_str());
+  }
+  
+  if (newTopic == USER_MQTT_CLIENT_NAME "/ColorSelector/2/Toggle")
+  {
+      colorStates[2] = newPayload;
+      client.publish(USER_MQTT_CLIENT_NAME "/ColorSelector/2/ToggleState", colorStates[2].c_str());
+  }
+
+  if (newTopic == USER_MQTT_CLIENT_NAME "/ColorSelector/3/Toggle")
+  {
+      colorStates[3] = newPayload;
+      client.publish(USER_MQTT_CLIENT_NAME "/ColorSelector/3/ToggleState", colorStates[3].c_str());
+  }
+
+  if (newTopic == USER_MQTT_CLIENT_NAME "/ColorSelector/4/Toggle")
+  {
+      colorStates[4] = newPayload;
+      client.publish(USER_MQTT_CLIENT_NAME "/ColorSelector/4/ToggleState", colorStates[4].c_str());
+  }
+
+  if (newTopic == USER_MQTT_CLIENT_NAME "/ColorSelector/5/Toggle")
+  {
+      colorStates[5] = newPayload;
+      client.publish(USER_MQTT_CLIENT_NAME "/ColorSelector/5/ToggleState", colorStates[5].c_str());
+  }
   
   if (newTopic == USER_MQTT_CLIENT_NAME "/color1")
   {
@@ -901,6 +969,7 @@ void callback(char* topic, byte* payload, unsigned int length)
       return;
     } else {
       red1 = rgb_red;
+      rgbArray[0][0] = rgb_red;
     }
     
     uint8_t rgb_green = newPayload.substring(firstIndex + 1, lastIndex).toInt();
@@ -908,6 +977,7 @@ void callback(char* topic, byte* payload, unsigned int length)
       return;
     } else {
       green1 = rgb_green;
+      rgbArray[0][1] = rgb_green;
     }
     
     uint8_t rgb_blue = newPayload.substring(lastIndex + 1).toInt();
@@ -915,6 +985,7 @@ void callback(char* topic, byte* payload, unsigned int length)
       return;
     } else {
       blue1 = rgb_blue;
+      rgbArray[0][2] = rgb_blue;
     }
   }
 
@@ -930,6 +1001,7 @@ void callback(char* topic, byte* payload, unsigned int length)
       return;
     } else {
       red2 = rgb_red;
+      rgbArray[1][0] = rgb_red;
     }
     
     uint8_t rgb_green = newPayload.substring(firstIndex + 1, lastIndex).toInt();
@@ -937,6 +1009,7 @@ void callback(char* topic, byte* payload, unsigned int length)
       return;
     } else {
       green2 = rgb_green;
+      rgbArray[1][1] = rgb_green;
     }
     
     uint8_t rgb_blue = newPayload.substring(lastIndex + 1).toInt();
@@ -944,6 +1017,7 @@ void callback(char* topic, byte* payload, unsigned int length)
       return;
     } else {
       blue2 = rgb_blue;
+      rgbArray[1][2] = rgb_blue;
     }
   }
 
@@ -959,6 +1033,7 @@ void callback(char* topic, byte* payload, unsigned int length)
       return;
     } else {
       red3 = rgb_red;
+      rgbArray[2][0] = rgb_red;
     }
     
     uint8_t rgb_green = newPayload.substring(firstIndex + 1, lastIndex).toInt();
@@ -966,6 +1041,7 @@ void callback(char* topic, byte* payload, unsigned int length)
       return;
     } else {
       green3 = rgb_green;
+      rgbArray[2][1] = rgb_green;
     }
     
     uint8_t rgb_blue = newPayload.substring(lastIndex + 1).toInt();
@@ -973,6 +1049,65 @@ void callback(char* topic, byte* payload, unsigned int length)
       return;
     } else {
       blue3 = rgb_blue;
+      rgbArray[2][2] = rgb_blue;
+    }
+  }
+
+  if (newTopic == USER_MQTT_CLIENT_NAME "/color4")
+  {
+    client.publish(USER_MQTT_CLIENT_NAME "/color4State", charPayload); 
+    // get the position of the first and second commas
+    uint8_t firstIndex = newPayload.indexOf(',');
+    uint8_t lastIndex = newPayload.lastIndexOf(',');
+    
+    uint8_t rgb_red = newPayload.substring(0, firstIndex).toInt();
+    if (rgb_red < 0 || rgb_red > 255) {
+      return;
+    } else {
+      rgbArray[3][0] = rgb_red;
+    }
+    
+    uint8_t rgb_green = newPayload.substring(firstIndex + 1, lastIndex).toInt();
+    if (rgb_green < 0 || rgb_green > 255) {
+      return;
+    } else {
+      rgbArray[3][1] = rgb_green;
+    }
+    
+    uint8_t rgb_blue = newPayload.substring(lastIndex + 1).toInt();
+    if (rgb_blue < 0 || rgb_blue > 255) {
+      return;
+    } else {
+      rgbArray[3][2] = rgb_blue;
+    }
+  }
+
+  if (newTopic == USER_MQTT_CLIENT_NAME "/color5")
+  {
+    client.publish(USER_MQTT_CLIENT_NAME "/color5State", charPayload); 
+    // get the position of the first and second commas
+    uint8_t firstIndex = newPayload.indexOf(',');
+    uint8_t lastIndex = newPayload.lastIndexOf(',');
+    
+    uint8_t rgb_red = newPayload.substring(0, firstIndex).toInt();
+    if (rgb_red < 0 || rgb_red > 255) {
+      return;
+    } else {
+      rgbArray[4][0] = rgb_red;
+    }
+    
+    uint8_t rgb_green = newPayload.substring(firstIndex + 1, lastIndex).toInt();
+    if (rgb_green < 0 || rgb_green > 255) {
+      return;
+    } else {
+      rgbArray[4][1] = rgb_green;
+    }
+    
+    uint8_t rgb_blue = newPayload.substring(lastIndex + 1).toInt();
+    if (rgb_blue < 0 || rgb_blue > 255) {
+      return;
+    } else {
+      rgbArray[4][2] = rgb_blue;
     }
   }
 
@@ -1019,55 +1154,113 @@ void callback(char* topic, byte* payload, unsigned int length)
   
   if (newTopic == USER_MQTT_CLIENT_NAME"/brightness") 
   {
-    client.publish(USER_MQTT_CLIENT_NAME "/brightnessState", charPayload); 
-    brightness = intPayload;
+    zoneBrightness[0] = intPayload;
+    client.publish(USER_MQTT_CLIENT_NAME "/brightnessState", itoa(zoneBrightness[0], charPayload, 10));
   }
+  #if ZONEONE == 1
+  if (newTopic == USER_MQTT_CLIENT_NAME"/brightness/Zone1" || newTopic == USER_MQTT_CLIENT_NAME"/brightness") 
+  {
+    zoneBrightness[0] = intPayload;
+    client.publish(USER_MQTT_CLIENT_NAME "/brightnessState/Zone1", itoa(zoneBrightness[0], charPayload, 10));
+  }
+  #endif
+  #if ZONETWO == 1
+  if (newTopic == USER_MQTT_CLIENT_NAME"/brightness/Zone2" || newTopic == USER_MQTT_CLIENT_NAME"/brightness") 
+  {
+    zoneBrightness[1] = intPayload;
+    client.publish(USER_MQTT_CLIENT_NAME "/brightnessState/Zone2", itoa(zoneBrightness[1], charPayload, 10));
+  }
+  #endif
+  #if ZONETHREE == 1
+  if (newTopic == USER_MQTT_CLIENT_NAME"/brightness/Zone3" || newTopic == USER_MQTT_CLIENT_NAME"/brightness") 
+  {
+    zoneBrightness[2] = intPayload;
+    client.publish(USER_MQTT_CLIENT_NAME "/brightnessState/Zone3", itoa(zoneBrightness[2], charPayload, 10));
+  }
+  #endif
+  #if ZONEFOUR == 1
+  if (newTopic == USER_MQTT_CLIENT_NAME"/brightness/Zone4" || newTopic == USER_MQTT_CLIENT_NAME"/brightness") 
+  {
+    zoneBrightness[3] = intPayload;
+    client.publish(USER_MQTT_CLIENT_NAME "/brightnessState/Zone4", itoa(zoneBrightness[3], charPayload, 10));
+  }
+  #endif
+  #if ZONEFIVE == 1
+  if (newTopic == USER_MQTT_CLIENT_NAME"/brightness/Zone5" || newTopic == USER_MQTT_CLIENT_NAME"/brightness") 
+  {
+    zoneBrightness[4] = intPayload;
+    client.publish(USER_MQTT_CLIENT_NAME "/brightnessState/Zone5", itoa(zoneBrightness[4], charPayload, 10));
+  }
+  #endif
+  #if ZONESIX == 1
+  if (newTopic == USER_MQTT_CLIENT_NAME"/brightness/Zone6" || newTopic == USER_MQTT_CLIENT_NAME"/brightness") 
+  {
+    zoneBrightness[5] = intPayload;
+    client.publish(USER_MQTT_CLIENT_NAME "/brightnessState/Zone6", itoa(zoneBrightness[5], charPayload, 10));
+  }
+  #endif
   
   if (newTopic == USER_MQTT_CLIENT_NAME"/power")
   {
     showZoneLights[0] = newPayload == "ON";
-    client.publish(USER_MQTT_CLIENT_NAME "/powerState", charPayload);
+    client.publish(USER_MQTT_CLIENT_NAME "/powerState", boolToOnOff(showZoneLights[0]).c_str());
+    if(newPayload == "OFF")
+    {
+      client.publish(USER_MQTT_CLIENT_NAME "/ColorSelector/1/ToggleState", charPayload);
+      client.publish(USER_MQTT_CLIENT_NAME "/ColorSelector/2/ToggleState", charPayload);
+      client.publish(USER_MQTT_CLIENT_NAME "/ColorSelector/3/ToggleState", charPayload);
+      client.publish(USER_MQTT_CLIENT_NAME "/ColorSelector/4/ToggleState", charPayload);
+      client.publish(USER_MQTT_CLIENT_NAME "/ColorSelector/5/ToggleState", charPayload);
+    }
+    if(newPayload == "ON")
+    {
+      client.publish(USER_MQTT_CLIENT_NAME "/ColorSelector/1/ToggleState", colorStates[1].c_str());
+      client.publish(USER_MQTT_CLIENT_NAME "/ColorSelector/2/ToggleState", colorStates[2].c_str());
+      client.publish(USER_MQTT_CLIENT_NAME "/ColorSelector/3/ToggleState", colorStates[3].c_str());
+      client.publish(USER_MQTT_CLIENT_NAME "/ColorSelector/4/ToggleState", colorStates[4].c_str());
+      client.publish(USER_MQTT_CLIENT_NAME "/ColorSelector/5/ToggleState", colorStates[5].c_str());
+    }
   }
   #if ZONEONE == 1
   if (newTopic == USER_MQTT_CLIENT_NAME"/power/Zone1" || newTopic == USER_MQTT_CLIENT_NAME"/power")
   {
     showZoneLights[0] = newPayload == "ON";
-    client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone1", charPayload);
+    client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone1", boolToOnOff(showZoneLights[0]).c_str());
   }
   #endif
   #if ZONETWO == 1
   if (newTopic == USER_MQTT_CLIENT_NAME"/power/Zone2" || newTopic == USER_MQTT_CLIENT_NAME"/power")
   {
     showZoneLights[1] = newPayload == "ON";
-    client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone2", charPayload);
+    client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone2", boolToOnOff(showZoneLights[1]).c_str());
   }
   #endif
   #if ZONETHREE == 1
   if (newTopic == USER_MQTT_CLIENT_NAME"/power/Zone3" || newTopic == USER_MQTT_CLIENT_NAME"/power")
   {
     showZoneLights[2] = newPayload == "ON";
-    client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone3", charPayload);
+    client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone3", boolToOnOff(showZoneLights[2]).c_str());
   }
   #endif
   #if ZONEFOUR == 1
   if (newTopic == USER_MQTT_CLIENT_NAME"/power/Zone4" || newTopic == USER_MQTT_CLIENT_NAME"/power")
   {
     showZoneLights[3] = newPayload == "ON";
-    client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone4", charPayload);
+    client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone4", boolToOnOff(showZoneLights[3]).c_str());
   }
   #endif
   #if ZONEFIVE == 1
   if (newTopic == USER_MQTT_CLIENT_NAME"/power/Zone5" || newTopic == USER_MQTT_CLIENT_NAME"/power")
   {
     showZoneLights[4] = newPayload == "ON";
-    client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone5", charPayload);
+    client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone5", boolToOnOff(showZoneLights[4]).c_str());
   }
   #endif
   #if ZONESIX == 1
   if (newTopic == USER_MQTT_CLIENT_NAME"/power/Zone6" || newTopic == USER_MQTT_CLIENT_NAME"/power")
   {
     showZoneLights[5] = newPayload == "ON";
-    client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone6", charPayload);
+    client.publish(USER_MQTT_CLIENT_NAME "/powerState/Zone6", boolToOnOff(showZoneLights[5]).c_str());
   }
   #endif
 }
@@ -1078,8 +1271,9 @@ void callback(char* topic, byte* payload, unsigned int length)
 
 void chase(void* args)
 {
+  
   int i = (int)args;
-  if(zoneStartPosition[i] == 5)
+  if(zoneStartPosition[i] == ((colorsEnabled*2)-1))
   {
     zoneStartPosition[i] = 0;
   }
@@ -1110,6 +1304,35 @@ void checkIn()
 {
   client.publish(USER_MQTT_CLIENT_NAME"/checkIn","OK");
   timer.setTimeout(120000, checkIn);
+}
+
+void updateColorsEnabled()
+{
+  uint8_t count = 0;
+  availableColors[5] = {};
+  for(uint8_t i = 1; i <= colorsCount; i++)
+  {
+    if(colorStates[i] == "ON")
+    {
+      availableColors[count] = CRGB(rgbArray[i-1][0],rgbArray[i-1][1],rgbArray[i-1][2]);
+      count++;
+    }
+  }
+
+  if(colorsEnabled != count)
+  {
+    colorsEnabled = count;
+    for(uint8_t i = 0; i < 5; i++)
+    {
+      zoneStartPosition[i] = 0;
+    }
+  }
+  
+  if(colorsEnabled == 0)
+  {
+    availableColors[0] = CRGB(255,0,0);
+    colorsEnabled = 1;
+  }
 }
 
 void setSectionPattern(CRGB zone[], int zoneLEDS, int sectionStart, int sectionEnd, byte heat[], int fireStart, int fireEnd, int zoneIndex)
@@ -1186,9 +1409,9 @@ void setZonePattern(CRGB zone[], int zoneLEDS, int previousZoneLED, Ball balls[]
   {
     heartbeat(zone, zoneLEDS, startPosition);
   }
-  if(effect == "Three_Solid")
+  if(effect == "Traditional")
   {
-    threeSolid(zone, zoneLEDS);
+    traditionalSolid(zone, zoneLEDS);
   }
 }
 
@@ -1905,30 +2128,31 @@ void loop()
   }
   timer.run();
   EVERY_N_MILLISECONDS( 20 ) { gHue++; }
+  updateColorsEnabled();
   choosePattern();
 
   #if ZONEONE == 1
-  FastLED[0].showLeds(brightness);
+  FastLED[0].showLeds(zoneBrightness[0]);
   #endif
 
   #if ZONETWO == 1
-  FastLED[1].showLeds(brightness);
+  FastLED[1].showLeds(zoneBrightness[1]);
   #endif
 
   #if ZONETHREE == 1
-  FastLED[2].showLeds(brightness);
+  FastLED[2].showLeds(zoneBrightness[2]);
   #endif
 
   #if ZONEFOUR == 1
-  FastLED[3].showLeds(brightness);
+  FastLED[3].showLeds(zoneBrightness[3]);
   #endif
 
   #if ZONEFIVE == 1
-  FastLED[4].showLeds(brightness);
+  FastLED[4].showLeds(zoneBrightness[4]);
   #endif
   
   #if ZONESIX == 1
-  FastLED[5].showLeds(brightness);
+  FastLED[5].showLeds(zoneBrightness[5]);
   #endif
   
 }
@@ -1966,54 +2190,28 @@ int Ripple(CRGB zone[], int ledCount, int zoneCenter, int zoneStep)
 
 void rGB(CRGB zone[], int zoneLEDS, uint8_t startPosition)
 {
-  if(startPosition < 6)
+  int squenceLength = colorsEnabled*2;
+  if(startPosition < squenceLength)
   {
     fadeToBlackBy( zone, zoneLEDS, 80);
-    for(int pixel = startPosition+1; pixel < zoneLEDS; pixel+=6)  
+    for(int skip = 1; skip < squenceLength; skip+=2)
     {
-      if(pixel <= zoneLEDS)
+      for(int pixel = startPosition+skip; pixel < zoneLEDS; pixel+=squenceLength)  
       {
-        zone[pixel] = CRGB(red1,green1,blue1);
-      }
-    }
-    for(int pixel = startPosition+3; pixel < zoneLEDS; pixel+=6)
-    {
-      if(pixel <= zoneLEDS)
-      {
-        zone[pixel] = CRGB(red2,green2,blue2);
-      }
-    }
-    for(int pixel = startPosition+5; pixel < zoneLEDS; pixel+=6)
-    {
-      if(pixel <= zoneLEDS)
-      {
-        zone[pixel] = CRGB(red3,green3,blue3);
-      } 
+        if(pixel <= zoneLEDS)
+        {
+          int currentColor = ((skip+1)/2)-1;
+          zone[pixel] = availableColors[currentColor];
+        }
+      }  
     }
   }
-  if(startPosition == 1)
+  
+  int colorIndex = colorsEnabled-1;
+  for(int pos = startPosition-1; pos >= 0; pos-=2)
   {
-    zone[0]=CRGB(red3,green3,blue3);
-  }
-  if(startPosition == 2)
-  {
-    zone[1]=CRGB(red3,green3,blue3);
-  }
-  if(startPosition == 3)
-  {
-    zone[2]=CRGB(red3,green3,blue3);
-    zone[0]=CRGB(red2,green2,blue2);
-  }
-  if(startPosition == 4)
-  {
-    zone[3]=CRGB(red3,green3,blue3);
-    zone[1]=CRGB(red2,green2,blue2);
-  }
-  if(startPosition == 5)
-  {
-    zone[4]=CRGB(red3,green3,blue3);
-    zone[2]=CRGB(red2,green2,blue2);
-    zone[0]=CRGB(red1,green1,blue1);
+    zone[pos] = availableColors[colorIndex];
+    colorIndex--;
   }
 }
 
@@ -2094,53 +2292,25 @@ void Rainbow(CRGB zone[], int zoneLEDS, uint8_t numberOfRainbows)
 void Blocked(CRGB zone[], int zoneLEDS, uint8_t startPosition)
 {
   fadeToBlackBy( zone, zoneLEDS, 2);
-  for( int mark = 0; mark < zoneLEDS; mark+=30)
+  uint8_t startColorIndex = map(startPosition, 0, (colorsEnabled*2)-1, 0, colorsEnabled-1);
+  
+  for( int mark = 0; mark < zoneLEDS; mark+=(colorsEnabled*10)) //repeat color block sequence
   {
-    for( int i = 0; i < 9; i++) 
+    for( int i = 0; i < 9; i++) // repeat for each pixel in color block size
     {
-      if(startPosition == 0 || startPosition == 1)
+      for(int blockNum = 0; blockNum < (colorsEnabled*10); blockNum+=10) //set one of each color in each block
       {
-        if(i+mark <= zoneLEDS)
+        if((i+blockNum+mark) <= zoneLEDS)
         {
-          zone[i+mark] = CRGB(red1,green1,blue1);
-        }
-        if(i+10+mark <= zoneLEDS)
-        {
-          zone[i+10+mark] = CRGB(red2,green2,blue2);
-        }
-        if(i+20+mark <= zoneLEDS)
-        {
-          zone[i+20+mark] = CRGB(red3,green3,blue3);
-        }
-      }
-      if(startPosition == 2 || startPosition == 3)
-      {
-        if(i+mark <= zoneLEDS)
-        {
-          zone[i+mark] = CRGB(red2,green2,blue2);
-        }
-        if(i+10+mark <= zoneLEDS)
-        {
-          zone[i+10+mark] = CRGB(red3,green3,blue3);
-        }
-        if(i+20+mark <= zoneLEDS)
-        {
-          zone[i+20+mark] = CRGB(red1,green1,blue1);
-        }
-      }
-      if(startPosition == 4 || startPosition == 5)
-      {
-        if(i+mark <= zoneLEDS)
-        {
-          zone[i+mark] = CRGB(red3,green3,blue3);
-        }
-        if(i+10+mark <= zoneLEDS)
-        {
-          zone[i+10+mark] = CRGB(red1,green1,blue1);
-        }
-        if(i+20+mark <= zoneLEDS)
-        {
-          zone[i+20+mark] = CRGB(red2,green2,blue2);
+          zone[i+blockNum+mark] = availableColors[startColorIndex];
+          if(startColorIndex < colorsEnabled-1)
+          {
+            startColorIndex++;
+          }
+          else
+          {
+            startColorIndex = 0;
+          }
         }
       }
     }
@@ -2278,23 +2448,23 @@ void fire(CRGB zone[], byte heat[], int sectionStart, int sectionEnd, int fireSt
 }
 
 void heartbeat(CRGB zone[], int zoneLEDS, uint8_t startPosition) {
-  if(startPosition == 1 || startPosition == 3) {
+  uint8_t beatIndex = map(startPosition, 0, (colorsEnabled*2)-1, 0, 5);
+  if(beatIndex == 1 || beatIndex == 3) {
     fill_solid(zone, zoneLEDS, CRGB(red1, green1, blue1));
   } else {
     fill_solid(zone, zoneLEDS, CRGB(red1/2, green1/2, blue1/2));   
   }  
 }
 
-void threeSolid(CRGB zone[], int zoneLEDS)
+void traditionalSolid(CRGB zone[], int zoneLEDS)
 {
-  for(int pixel = 0; pixel < zoneLEDS; pixel+=12)
+  uint8_t gap = 4;
+  for(int pixel = 0; pixel < zoneLEDS; pixel+= (gap*colorsEnabled))
   {
-    if(pixel <= zoneLEDS)
-      zone[pixel] = CRGB(red1,green1,blue1);
-    if(pixel+4 <= zoneLEDS)
-      zone[pixel+3] = CRGB(red2,green2,blue2);
-    if(pixel+8 <= zoneLEDS)
-      zone[pixel+6] = CRGB(red3,green3,blue3);
+    for(int color = 0; color < colorsEnabled; color++)
+    {
+      zone[pixel+(color*gap)] = availableColors[color];
+    }
   }
 }
 
@@ -2308,16 +2478,22 @@ void fireworks(CRGB zone[], int zoneLEDS, Ball balls[], int fireworkCount, uint8
     {
       balls[i].position = -1;
       balls[i].exploding = 0;
-      switch(random8(3))
+      switch(random8(colorsEnabled))
       {
         case 0:
-          balls[i].color = CRGB(red1,green1,blue1);
+          balls[i].color = availableColors[0];
           break;
         case 1:
-          balls[i].color = CRGB(red2,green2,blue2);
+          balls[i].color = availableColors[1];
           break;
         case 2:
-          balls[i].color = CRGB(red3,green3,blue3);
+          balls[i].color = availableColors[2];
+          break;
+        case 3:
+          balls[i].color = availableColors[3];
+          break;
+        case 4:
+          balls[i].color = availableColors[4];
           break;
       }
       balls[i].reverse = random8(2) == 0;
@@ -2406,16 +2582,22 @@ void fireworks(CRGB zone[], int zoneLEDS, Ball balls[], int fireworkCount, uint8
         balls[i].exploding = 0;
         balls[i].position = -1;
         balls[i].reverse = random8(2) == 0;
-        switch(random8(3))
+        switch(random8(colorsEnabled))
         {
           case 0:
-            balls[i].color = CRGB(red1,green1,blue1);
+            balls[i].color = availableColors[0];
             break;
           case 1:
-            balls[i].color = CRGB(red2,green2,blue2);
+            balls[i].color = availableColors[1];
             break;
           case 2:
-            balls[i].color = CRGB(red3,green3,blue3);
+            balls[i].color = availableColors[2];
+            break;
+          case 3:
+            balls[i].color = availableColors[3];
+            break;
+          case 4:
+            balls[i].color = availableColors[4];
             break;
         }
       }

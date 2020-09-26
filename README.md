@@ -60,28 +60,45 @@ light:
       - Fire
       - Fill_Solid
       - Spooky_Eyes
+      - Heartbeat
+      - Fireworks
+      - Traditional
       - LED_Locator
     retain: true
   - platform: mqtt
     name: "Color 1"
-    command_topic: "[MQTT_CLIENT_ID]/ColorPower"
-    state_topic: "[MQTT_CLIENT_ID]/powerState"
+    command_topic: "[MQTT_CLIENT_ID]/ColorSelector/1/Toggle"
+    state_topic: "[MQTT_CLIENT_ID]/ColorSelector/1/ToggleState"
     rgb_command_topic: "[MQTT_CLIENT_ID]/color1"
     rgb_state_topic: "[MQTT_CLIENT_ID]/color1State"
     retain: true
   - platform: mqtt
     name: "Color 2"
-    command_topic: "[MQTT_CLIENT_ID]/ColorPower"
-    state_topic: "[MQTT_CLIENT_ID]/powerState"
+    command_topic: "[MQTT_CLIENT_ID]/ColorSelector/2/Toggle"
+    state_topic: "[MQTT_CLIENT_ID]/ColorSelector/2/ToggleState"
     rgb_command_topic: "[MQTT_CLIENT_ID]/color2"
     rgb_state_topic: "[MQTT_CLIENT_ID]/color2State"
     retain: true
   - platform: mqtt
     name: "Color 3"
-    command_topic: "[MQTT_CLIENT_ID]/ColorPower"
-    state_topic: "[MQTT_CLIENT_ID]/powerState"
+    command_topic: "[MQTT_CLIENT_ID]/ColorSelector/3/Toggle"
+    state_topic: "[MQTT_CLIENT_ID]/ColorSelector/3/ToggleState"
     rgb_command_topic: "[MQTT_CLIENT_ID]/color3"
     rgb_state_topic: "[MQTT_CLIENT_ID]/color3State"
+    retain: true
+  - platform: mqtt
+    name: "Color 4"
+    command_topic: "[MQTT_CLIENT_ID]/ColorSelector/4/Toggle"
+    state_topic: "[MQTT_CLIENT_ID]/ColorSelector/4/ToggleState"
+    rgb_command_topic: "[MQTT_CLIENT_ID]/color4"
+    rgb_state_topic: "[MQTT_CLIENT_ID]/color4State"
+    retain: true
+  - platform: mqtt
+    name: "Color 5"
+    command_topic: "[MQTT_CLIENT_ID]/ColorSelector/5/Toggle"
+    state_topic: "[MQTT_CLIENT_ID]/ColorSelector/5/ToggleState"
+    rgb_command_topic: "[MQTT_CLIENT_ID]/color5"
+    rgb_state_topic: "[MQTT_CLIENT_ID]/color5State"
     retain: true
   - platform: mqtt
     name: "Glitter"
@@ -129,6 +146,9 @@ light:
       - Fire
       - Fill_Solid
       - Spooky_Eyes
+      - Heartbeat
+      - Fireworks
+      - Traditional
       - LED_Locator
     retain: true
   - platform: mqtt
@@ -155,6 +175,9 @@ light:
       - Fire
       - Fill_Solid
       - Spooky_Eyes
+      - Heartbeat
+      - Fireworks
+      - Traditional
       - LED_Locator
     retain: true
   ```
